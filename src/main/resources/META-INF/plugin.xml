@@ -1,6 +1,6 @@
 <idea-plugin>
-    <id>python-connectome-support</id>
-    <name>Connectome Support</name>
+    <id>pycharm-connectome-support</id>
+    <name>Connectome Support for PyCharm</name>
     <version>0.1.0</version>
     <category>Tool support</category>
 
