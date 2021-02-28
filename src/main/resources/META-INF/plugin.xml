@@ -1,0 +1,22 @@
+<idea-plugin>
+    <id>python-connectome-support</id>
+    <name>Connectome Support</name>
+    <version>0.1.0</version>
+    <category>Tool support</category>
+
+    <vendor email="maxs987@gmail.com" url="https://github.com/maxme1">Max</vendor>
+    <description><![CDATA[
+      Small plugin that removes false positive warnings while using the Python `connectome` library.
+    ]]></description>
+
+    <depends>com.intellij.modules.lang</depends>
+    <depends>com.intellij.modules.python</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <lang.inspectionSuppressor language="Python" implementationClass="connectome.ConnectomeMethodsSuppressor" />
+    </extensions>
+    <extensions defaultExtensionNs="Pythonid">
+        <knownDecoratorProvider implementation="connectome.FieldDecorators" />
+<!--        <typeProvider implementation="connectome.SelfTypeProvider" />-->
+    </extensions>
+</idea-plugin>
