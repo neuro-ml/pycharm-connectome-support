@@ -11,8 +11,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
+import java.util.Set;
 
 public class ConnectomeMethodsSuppressor implements InspectionSuppressor {
+    final private Set<String> classes = Set.of("Source", "Transform", "Mixin");
+
     @Override
     public boolean isSuppressedFor(@NotNull PsiElement element, @NotNull String toolId) {
         // only suppress Python-related stuff
@@ -54,7 +57,25 @@ public class ConnectomeMethodsSuppressor implements InspectionSuppressor {
     private boolean isConnectomeMethod(@NotNull PyFunction function) {
         PyClass containingClass = function.getContainingClass();
         if (containingClass == null) return false;
-        PyArgumentList superClassExpressionList = containingClass.getSuperClassExpressionList();
+        return isConnectomeClass(containingClass);
+    }
+
+    private boolean isConnectomeClass(@NotNull PyClass cls) {
+        // either this is a connectome class
+        String className = cls.getName();
+        if (classes.contains(className)) {
+            QualifiedName canonicalImportPath = QualifiedNameFinder.findCanonicalImportPath(cls, null);
+            if (canonicalImportPath != null) {
+                if (Objects.equals(canonicalImportPath.getFirstComponent(), "connectome")) return true;
+            }
+//                        TODO: metaclasses?
+//                        System.out.println(((PyClass) target).getMetaClassExpression());
+//                        VirtualFile virtualFile = target.getContainingFile().getVirtualFile();
+//                        Module moduleForPsiElement = ModuleUtil.findModuleForPsiElement(target);
+        }
+
+        // or is a subclass
+        PyArgumentList superClassExpressionList = cls.getSuperClassExpressionList();
         if (superClassExpressionList == null) return false;
 
         for (PyExpression argument : superClassExpressionList.getArguments()) {
@@ -63,20 +84,7 @@ public class ConnectomeMethodsSuppressor implements InspectionSuppressor {
                 PsiReference reference = argument.getReference();
                 if (reference != null) {
                     PsiElement target = reference.resolve();
-                    if (target instanceof PyClass) {
-                        String className = ((PyClass) target).getName();
-                        if (!(Objects.equals(className, "Source") || Objects.equals(className, "Transform"))) continue;
-
-                        QualifiedName canonicalImportPath = QualifiedNameFinder.findCanonicalImportPath(target, null);
-                        if (canonicalImportPath != null) {
-                            if (Objects.equals(canonicalImportPath.getFirstComponent(), "connectome")) return true;
-                        }
-
-//                        TODO:
-//                        System.out.println(((PyClass) target).getMetaClassExpression());
-//                        VirtualFile virtualFile = target.getContainingFile().getVirtualFile();
-//                        Module moduleForPsiElement = ModuleUtil.findModuleForPsiElement(target);
-                    }
+                    if (target instanceof PyClass && isConnectomeClass((PyClass) target)) return true;
                 }
             }
         }
