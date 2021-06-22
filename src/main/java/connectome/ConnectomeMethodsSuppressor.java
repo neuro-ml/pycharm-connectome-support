@@ -31,17 +31,20 @@ public class ConnectomeMethodsSuppressor implements InspectionSuppressor {
             if (!(parent instanceof PyFunction)) return false;
             return isConnectomeMethod((PyFunction) parent);
         }
-        // suppress type error with fake "self"
+        // suppress errors with fake "self"
         if (element instanceof PyReferenceExpression && toolId.equals("PyTypeChecker")) {
             PsiReference reference = element.getReference();
-            if (reference != null) {
-                return isConnectomeMethodSelf(reference.resolve());
-            }
+            if (reference != null && isConnectomeMethodSelf(reference.resolve())) return true;
+        }
+        if (element instanceof PyTargetExpression && toolId.equals("PyMethodFirstArgAssignment")) {
+            PyClass reference  = ((PyTargetExpression) element).getContainingClass();
+            if (reference != null && isConnectomeClass(reference)) return true;
         }
 
 //        PyTypeProvider
 //        PyKnownDecoratorProvider
 //        PyAnnotationElementType
+//        System.out.println(toolId);
         return false;
     }
 
