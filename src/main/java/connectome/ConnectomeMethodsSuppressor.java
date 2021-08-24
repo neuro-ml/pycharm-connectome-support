@@ -14,7 +14,7 @@ import java.util.Objects;
 import java.util.Set;
 
 public class ConnectomeMethodsSuppressor implements InspectionSuppressor {
-    final private Set<String> classes = Set.of("Source", "Transform", "Mixin");
+    final private Set<String> classes = Set.of("Source", "Transform", "Mixin", "CallableLayer", "BaseLayer");
 
     @Override
     public boolean isSuppressedFor(@NotNull PsiElement element, @NotNull String toolId) {
@@ -37,8 +37,35 @@ public class ConnectomeMethodsSuppressor implements InspectionSuppressor {
             if (reference != null && isConnectomeMethodSelf(reference.resolve())) return true;
         }
         if (element instanceof PyTargetExpression && toolId.equals("PyMethodFirstArgAssignment")) {
-            PyClass reference  = ((PyTargetExpression) element).getContainingClass();
+            PyClass reference = ((PyTargetExpression) element).getContainingClass();
             if (reference != null && isConnectomeClass(reference)) return true;
+        }
+
+        if (element instanceof PyReferenceExpression && toolId.equals("PyProtectedMember")) {
+            PsiElement[] children = element.getChildren();
+            System.out.println(children[0]);
+            System.out.println(children[0].getClass());
+            if (children.length == 1) {
+                PsiElement child = children[0];
+                // SomeClass()._field
+                if (child instanceof PyCallExpression) {
+                    return isConnectomeClassCall((PyCallExpression) child);
+                }
+
+                // x = SomeClass()
+                // x._field
+                if (child instanceof PyReferenceExpression) {
+                    PsiElement resolved = ((PyReferenceExpression) child).getReference().resolve();
+
+                    if (resolved instanceof PyTargetExpression) {
+                        PyExpression value = ((PyTargetExpression) resolved).findAssignedValue();
+
+                        if (value instanceof PyCallExpression) {
+                            return isConnectomeClassCall((PyCallExpression) value);
+                        }
+                    }
+                }
+            }
         }
 
 //        PyTypeProvider
@@ -63,13 +90,29 @@ public class ConnectomeMethodsSuppressor implements InspectionSuppressor {
         return isConnectomeClass(containingClass);
     }
 
+    private boolean isConnectomeClassCall(@NotNull PyCallExpression call) {
+        PyExpression callee = call.getCallee();
+
+        if (callee instanceof PyReferenceExpression) {
+            PsiElement cls = ((PyReferenceExpression) callee).getReference().resolve();
+
+            if (cls instanceof PyClass) {
+                return isConnectomeClass((PyClass) cls);
+            }
+        }
+
+        return false;
+    }
+
     private boolean isConnectomeClass(@NotNull PyClass cls) {
         // either this is a connectome class
         String className = cls.getName();
         if (classes.contains(className)) {
             QualifiedName canonicalImportPath = QualifiedNameFinder.findCanonicalImportPath(cls, null);
             if (canonicalImportPath != null) {
-                if (Objects.equals(canonicalImportPath.getFirstComponent(), "connectome")) return true;
+                for (String component : canonicalImportPath.getComponents()) {
+                    if (Objects.equals(component, "connectome")) return true;
+                }
             }
 //                        TODO: metaclasses?
 //                        System.out.println(((PyClass) target).getMetaClassExpression());
