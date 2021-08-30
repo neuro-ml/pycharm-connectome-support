@@ -43,8 +43,6 @@ public class ConnectomeMethodsSuppressor implements InspectionSuppressor {
 
         if (element instanceof PyReferenceExpression && toolId.equals("PyProtectedMember")) {
             PsiElement[] children = element.getChildren();
-            System.out.println(children[0]);
-            System.out.println(children[0].getClass());
             if (children.length == 1) {
                 PsiElement child = children[0];
                 // SomeClass()._field
